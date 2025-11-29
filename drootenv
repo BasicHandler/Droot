@@ -1,0 +1,299 @@
+//drootenv
+
+use std::env;
+use std::ffi::CString;
+use std::os::unix::process::CommandExt;
+use std::process::Command;
+use std::fs::{self, File};
+use std::io::Write;
+
+fn main() {
+    hard_seal(); // Kill all telemetry options before boot
+
+    let guestroot = "/data/local/tmp/alpineguest";
+    let droot_bin = "/data/data/com.termux/files/usr/bin/droot";
+
+    // Fail-closed if anything’s missing
+    if !Path::new(drootbin).exists() || !Path::new(guestroot).exists() {
+        fatal_exit("Missing droot binaries or guest filesystem");
+    }
+
+    // No DNS, no internet
+    let  = fs::write(format!("{}/etc/resolv.conf", guestroot), b"nameserver 0.0.0.0\n");
+
+    // Nullify command history and log trails inside guest
+    let nulls = ["/root/.bashhistory", "/root/.ashhistory", "/var/log", "/tmp", "/dev/shm"];
+    for path in nulls {
+        let  = fs::write(format!("{}{}", guestroot, path), b"");
+    }
+
+    // Launch Alpine guest in jailed mode
+    let err = Command::new(droot_bin)
+        .arg("-R").arg(guest_root)
+        .arg("-0") // Fake root
+        .arg("-b").arg("/dev/")
+        .arg("-b").arg("/proc/")
+        .arg("-b").arg("/sys/")
+        .arg("/bin/sh")
+        .env_clear()
+        .exec(); // Replaces process — no return
+
+    fatal_exit(&format!("Failed to exec: {:?}", err));
+}
+
+fn hard_seal() {
+    // Wipe inherited environment vars
+    for (key, _) in env::vars() {
+        std::env::remove_var(key);
+    }
+
+    // Block SIGINT/SIGTERM log writes
+    unsafe {
+        libc::signal(libc::SIGINT, libc::SIG_IGN);
+        libc::signal(libc::SIGTERM, libc::SIG_IGN);
+    }
+
+    // Reset umask
+    let _ = unsafe { libc::umask(0o077) };
+}
+
+fn fatal_exit(msg: &str) -> ! {
+    let  = File::create("/dev/null").andthen(|mut f| writeln!(f, "DROOT: {}", msg));
+    std::process::exit(1);
+}
+
+
+also another aproach
+
+
+
+
+import android.os.Bundle;
+import android.widget.Toast;
+import androidx.appcompat.app.AppCompatActivity;
+import me.weishu.shizuku.Shizuku;
+import me.weishu.shizuku.ShizukuBinderWrapper;
+import me.weishu.shizuku.ShizukuShell;
+
+public class EnhancedProotActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activityenhancedproot);
+
+        if (Shizuku.isPreV11()) {
+            Shizuku.addRequestPermissionResultListener(new Shizuku.OnRequestPermissionResultListener() {
+                @Override
+                public void onRequestPermissionResult(boolean granted) {
+                    if (granted) {
+                        setupEnhancedProot();
+                    } else {
+                        Toast.makeText(EnhancedProotActivity.this, "Permission denied", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            Shizuku.requestPermission();
+        } else {
+            ShizukuBinderWrapper binder = ShizukuProvider.getInstance().getBinder();
+            if (binder != null) {
+                Shizuku.bind(binder, new Shizuku.ProcessListener() {
+                    @Override
+                    public void onConnected() {
+                        if (Shizuku.checkSelfPermission() == Shizuku.PERMISSION_GRANTED) {
+                            setupEnhancedProot();
+                        } else {
+                            Shizuku.requestPermission();
+                        }
+                    }
+
+                    @Override
+                    public void onDisconnected() {
+                        // Service disconnected
+                    }
+                });
+            }
+        }
+    }
+
+    private void setupEnhancedProot() {
+        // Initialize and set up the enhanced proot environment
+        // Example: run a command with elevated privileges
+        runCommandWithOutput("ls -l /data");
+    }
+
+    private boolean isSafeCommand(String command) {
+        String[] safeCommands = {"ls", "cat", "echo"};
+        for (String safeCommand : safeCommands) {
+            if (command.startsWith(safeCommand)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String sanitizeInput(String input) {
+        return input.replaceAll("[^a-zA-Z0-9_./-]", "");
+    }
+
+    private void logCommandExecution(String command, String stdout, String stderr, int exitCode) {
+        Log.d("EnhancedProot", "Command: " + command);
+        Log.d("EnhancedProot", "stdout: " + stdout);
+        Log.d("EnhancedProot", "stderr: " + stderr);
+        Log.d("EnhancedProot", "exitCode: " + exitCode);
+    }
+
+    public void runCommandWithOutput(String command) {
+        command = sanitizeInput(command);
+        if (!isSafeCommand(command)) {
+            Toast.makeText(this, "Unsafe command: " + command, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        try {
+            ShizukuShell.CommandResult result = ShizukuShell.newShell().addCommand(command, true).exec();
+            String stdout = result.stdout;
+            String stderr = result.stderr;
+            int exitCode = result.exitCode;
+
+            logCommandExecution(command, stdout, stderr, exitCode);
+
+            Toast.makeText(this, "stdout: " + stdout, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "stderr: " + stderr, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "exitCode: " + exitCode, Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error executing command: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Log.e("EnhancedProot", "Error executing command: " + e.getMessage(), e);
+        }
+    }
+}
+
+
+
+
+
+
+Ensure that Shizuku is initialized securely and that the app has the necessary permissions.
+
+import me.weishu.shizuku.Shizuku;
+import me.weishu.shizuku.ShizukuBinderWrapper;
+import me.weishu.shizuku.ShizukuShell;
+
+public class EnhancedProotActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activityenhancedproot);
+
+        if (Shizuku.isPreV11()) {
+            // For Shizuku versions before 11
+            Shizuku.addRequestPermissionResultListener(new Shizuku.OnRequestPermissionResultListener() {
+                @Override
+                public void onRequestPermissionResult(boolean granted) {
+                    if (granted) {
+                        // Permission granted
+                        setupEnhancedProot();
+                    } else {
+                        // Permission denied
+                        Toast.makeText(EnhancedProotActivity.this, "Permission denied", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            Shizuku.requestPermission();
+        } else {
+            // For Shizuku versions 11 and later
+            ShizukuBinderWrapper binder = ShizukuProvider.getInstance().getBinder();
+            if (binder != null) {
+                Shizuku.bind(binder, new Shizuku.ProcessListener() {
+                    @Override
+                    public void onConnected() {
+                        // Service connected
+                        if (Shizuku.checkSelfPermission() == Shizuku.PERMISSION_GRANTED) {
+                            setupEnhancedProot();
+                        } else {
+                            Shizuku.requestPermission();
+                        }
+                    }
+
+                    @Override
+                    public void onDisconnected() {
+                        // Service disconnected
+                    }
+                });
+            }
+        }
+    }
+
+    private void setupEnhancedProot() {
+        // Initialize and set up the enhanced proot environment
+        // Example: run a command with elevated privileges
+        runCommandWithOutput("ls -l /data");
+    }
+
+    public void runCommandWithOutput(String command) {
+        try {
+            ShizukuShell.CommandResult result = ShizukuShell.newShell().addCommand(command, true).exec();
+            String stdout = result.stdout;
+            String stderr = result.stderr;
+            int exitCode = result.exitCode;
+
+            // Handle the output and errors
+            Log.d("EnhancedProot", "stdout: " + stdout);
+            Log.d("EnhancedProot", "stderr: " + stderr);
+            Log.d("EnhancedProot", "exitCode: " + exitCode);
+
+            // Optionally, display the output in a toast or UI element
+            Toast.makeText(this, "stdout: " + stdout, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "stderr: " + stderr, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "exitCode: " + exitCode, Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error executing command: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+}
+
+
+Logging and Monitoring:
+Implement logging to track command execution and errors.
+
+private void logCommandExecution(String command, String stdout, String stderr, int exitCode) {
+    Log.d("EnhancedProot", "Command: " + command);
+    Log.d("EnhancedProot", "stdout: " + stdout);
+    Log.d("EnhancedProot", "stderr: " + stderr);
+    Log.d("EnhancedProot", "exitCode: " + exitCode);
+}
+
+
+
+
+Use Safe Commands:
+Allow a limited set of safe commands to be executed.
+
+
+private boolean isSafeCommand(String command) {
+    // Example: Allow only specific commands
+    String[] safeCommands = {"ls", "cat", "echo"};
+    for (String safeCommand : safeCommands) {
+        if (command.startsWith(safeCommand)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
+
+Input Validation and Sanitization:
+Ensure that any user-provided inputs are validated and sanitized to prevent injection attacks.
+
+
+
+private String sanitizeInput(String input) {
+    // Example: Remove dangerous characters
+    return input.replaceAll("[^a-zA-Z0-9_./-]", "");
+}^a-zA-Z0-9_./-]", "");
+}
